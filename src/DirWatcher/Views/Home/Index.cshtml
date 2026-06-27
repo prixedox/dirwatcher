@@ -1,7 +1,9 @@
 @model DirWatcher.Models.ScanResult?
+@inject DirWatcher.Services.DemoFolderService Demo
 @{
     ViewData["Title"] = "Directory Change Detector";
-    var path = ViewBag.Path as string ?? "";
+    var path = ViewBag.Path as string ?? Demo.FolderPath;
+    var demoMessage = ViewBag.DemoMessage as string;
 }
 
 <h1 class="mb-3">Directory Change Detector</h1>
@@ -9,6 +11,11 @@
     Enter a local directory path and run the analysis. The first run records a baseline;
     each later run reports new, changed, and removed entries since the previous run.
 </p>
+
+@if (demoMessage is not null)
+{
+    <div class="alert alert-secondary">@demoMessage</div>
+}
 
 <form asp-controller="Home" asp-action="Index" method="post" class="row g-2 mb-3">
     <div class="col-12 col-md-9">
@@ -20,6 +27,25 @@
         <button type="submit" class="btn btn-primary w-100">Analyze</button>
     </div>
 </form>
+
+<div class="card mb-4 border-secondary">
+    <div class="card-body">
+        <h6 class="card-title">Demo controls</h6>
+        <p class="small text-muted mb-2">
+            Drive the sample folder <code>@Demo.FolderPath</code> without a terminal, then press
+            <strong>Analyze</strong> to detect the changes. <strong>Reset</strong> restores the baseline;
+            <strong>Apply changes</strong> modifies/adds/removes files. Each step is a separate click.
+        </p>
+        <div class="d-flex gap-2">
+            <form asp-controller="Demo" asp-action="Apply" method="post">
+                <button type="submit" class="btn btn-outline-primary">Apply demo changes</button>
+            </form>
+            <form asp-controller="Demo" asp-action="Reset" method="post">
+                <button type="submit" class="btn btn-outline-secondary">Reset demo folder</button>
+            </form>
+        </div>
+    </div>
+</div>
 
 @if (Model is not null)
 {
