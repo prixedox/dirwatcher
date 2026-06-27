@@ -1,8 +1,123 @@
+@model DirWatcher.Models.ScanResult?
 @{
-    ViewData["Title"] = "Home Page";
+    ViewData["Title"] = "Directory Change Detector";
+    var path = ViewBag.Path as string ?? "";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
-</div>
+<h1 class="mb-3">Directory Change Detector</h1>
+<p class="text-muted">
+    Enter a local directory path and run the analysis. The first run records a baseline;
+    each later run reports new, changed, and removed entries since the previous run.
+</p>
+
+<form asp-controller="Home" asp-action="Index" method="post" class="row g-2 mb-3">
+    <div class="col-12 col-md-9">
+        <input type="text" name="path" value="@path" class="form-control"
+               placeholder="/home/you/some/directory" aria-label="Directory path" />
+        @Html.ValidationMessage("path", new { @class = "text-danger" })
+    </div>
+    <div class="col-12 col-md-3">
+        <button type="submit" class="btn btn-primary w-100">Analyze</button>
+    </div>
+</form>
+
+@if (Model is not null)
+{
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Result</h5>
+            <p class="mb-1"><strong>Path:</strong> <code>@Model.AnalyzedPath</code></p>
+            <p class="mb-1"><strong>Scanned (UTC):</strong> @Model.ScannedAtUtc.ToString("u")</p>
+            <p class="mb-0">
+                <strong>Tracked:</strong>
+                @Model.TrackedFileCount file(s), @Model.TrackedDirectoryCount director(ies)
+            </p>
+        </div>
+    </div>
+
+    @if (Model.IsInitialScan)
+    {
+        <div class="alert alert-info">
+            Initial scan — baseline recorded. Run again after changing the directory to see differences.
+        </div>
+    }
+    else if (!Model.HasChanges)
+    {
+        <div class="alert alert-success">No changes since the last run.</div>
+    }
+    else
+    {
+        <div class="row">
+            <div class="col-12 col-lg-4">
+                <h4 class="text-success">New (@Model.Added.Count)</h4>
+                @if (Model.Added.Count == 0)
+                {
+                    <p class="text-muted">None</p>
+                }
+                else
+                {
+                    <table class="table table-sm table-striped">
+                        <thead><tr><th>Path</th><th>Type</th><th>Ver.</th></tr></thead>
+                        <tbody>
+                        @foreach (var i in Model.Added)
+                        {
+                            <tr>
+                                <td><code>@i.Path</code></td>
+                                <td>@(i.IsDirectory ? "dir" : "file")</td>
+                                <td>@(i.Version?.ToString() ?? "-")</td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                }
+            </div>
+
+            <div class="col-12 col-lg-4">
+                <h4 class="text-warning">Changed (@Model.Changed.Count)</h4>
+                @if (Model.Changed.Count == 0)
+                {
+                    <p class="text-muted">None</p>
+                }
+                else
+                {
+                    <table class="table table-sm table-striped">
+                        <thead><tr><th>Path</th><th>Version</th></tr></thead>
+                        <tbody>
+                        @foreach (var i in Model.Changed)
+                        {
+                            <tr>
+                                <td><code>@i.Path</code></td>
+                                <td>@i.PreviousVersion &rarr; <strong>@i.Version</strong></td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                }
+            </div>
+
+            <div class="col-12 col-lg-4">
+                <h4 class="text-danger">Removed (@Model.Deleted.Count)</h4>
+                @if (Model.Deleted.Count == 0)
+                {
+                    <p class="text-muted">None</p>
+                }
+                else
+                {
+                    <table class="table table-sm table-striped">
+                        <thead><tr><th>Path</th><th>Type</th><th>Last ver.</th></tr></thead>
+                        <tbody>
+                        @foreach (var i in Model.Deleted)
+                        {
+                            <tr>
+                                <td><code>@i.Path</code></td>
+                                <td>@(i.IsDirectory ? "dir" : "file")</td>
+                                <td>@(i.Version?.ToString() ?? "-")</td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                }
+            </div>
+        </div>
+    }
+}

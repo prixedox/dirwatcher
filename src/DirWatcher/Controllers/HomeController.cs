@@ -1,26 +1,47 @@
 using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using DirWatcher.Models;
+using DirWatcher.Services;
 
 namespace DirWatcher.Controllers;
 
 public class HomeController : Controller
 {
-    private readonly ILogger<HomeController> _logger;
+    private readonly ChangeDetectionService _service;
 
-    public HomeController(ILogger<HomeController> logger)
+    public HomeController(ChangeDetectionService service)
     {
-        _logger = logger;
+        _service = service;
     }
 
+    [HttpGet]
     public IActionResult Index()
     {
         return View();
     }
 
-    public IActionResult Privacy()
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult Index(string path)
     {
-        return View();
+        ViewBag.Path = path;
+
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            ModelState.AddModelError(nameof(path), "Please enter a directory path.");
+            return View();
+        }
+
+        try
+        {
+            var result = _service.Analyze(path);
+            return View(result);
+        }
+        catch (Exception ex) when (ex is DirectoryNotFoundException or ArgumentException or UnauthorizedAccessException)
+        {
+            ModelState.AddModelError(nameof(path), ex.Message);
+            return View();
+        }
     }
 
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
