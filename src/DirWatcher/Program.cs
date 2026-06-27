@@ -8,6 +8,9 @@ var snapshotDir = Path.Combine(builder.Environment.ContentRootPath, "App_Data", 
 builder.Services.AddSingleton<ISnapshotStore>(_ => new JsonSnapshotStore(snapshotDir));
 builder.Services.AddSingleton<ChangeDetectionService>();
 
+var demoPath = Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, "..", "..", "demo"));
+builder.Services.AddSingleton(new DemoFolderService(demoPath));
+
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
