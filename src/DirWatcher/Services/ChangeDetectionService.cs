@@ -108,11 +108,18 @@ public sealed class ChangeDetectionService
         };
     }
 
+    private static readonly EnumerationOptions WalkOptions = new()
+    {
+        RecurseSubdirectories = true,
+        IgnoreInaccessible = true,
+        AttributesToSkip = FileAttributes.ReparsePoint,
+    };
+
     private static List<FileEntry> ScanDirectory(string root)
     {
         var entries = new List<FileEntry>();
 
-        foreach (var dir in Directory.EnumerateDirectories(root, "*", SearchOption.AllDirectories))
+        foreach (var dir in Directory.EnumerateDirectories(root, "*", WalkOptions))
         {
             entries.Add(new FileEntry
             {
@@ -121,7 +128,7 @@ public sealed class ChangeDetectionService
             });
         }
 
-        foreach (var file in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+        foreach (var file in Directory.EnumerateFiles(root, "*", WalkOptions))
         {
             var info = new FileInfo(file);
             entries.Add(new FileEntry
@@ -142,8 +149,15 @@ public sealed class ChangeDetectionService
 
     private static string ComputeHash(string file)
     {
-        using var stream = File.OpenRead(file);
-        return Convert.ToHexString(SHA256.HashData(stream));
+        try
+        {
+            using var stream = File.OpenRead(file);
+            return Convert.ToHexString(SHA256.HashData(stream));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return "UNREADABLE";
+        }
     }
 
     private static FileEntry WithVersion(FileEntry scanned, int version) => new()
